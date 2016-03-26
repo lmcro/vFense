@@ -34,23 +34,23 @@ server {
         deny all;
     }
 
-    location /upload/package {
-        upload_store %(app_tmp_path)s/;
-        upload_store_access user:rw group:rw all:rw;
-        upload_set_form_field $upload_field_name.name "$upload_file_name";
-        upload_set_form_field $upload_field_name.content_type "$upload_content_type";
-        upload_set_form_field $upload_field_name.path "$upload_tmp_path";
-        upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
-        upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
-        upload_pass @after_upload;
-        upload_pass_form_field "^id$";
-        upload_pass_form_field ".*";
-        upload_cleanup 400 404 499 500-505;
-    }
-      
-    location @after_upload {
-        proxy_pass              https://rvweb;
-    } 
+#    location /upload/package {
+#        upload_store %(app_tmp_path)s/;
+#        upload_store_access user:rw group:rw all:rw;
+#        upload_set_form_field $upload_field_name.name "$upload_file_name";
+#        upload_set_form_field $upload_field_name.content_type "$upload_content_type";
+#        upload_set_form_field $upload_field_name.path "$upload_tmp_path";
+#        upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
+#        upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
+#        upload_pass @after_upload;
+#        upload_pass_form_field "^id$";
+#        upload_pass_form_field ".*";
+#        upload_cleanup 400 404 499 500-505;
+#    }
+
+#    location @after_upload {
+#        proxy_pass              https://rvweb;
+#    }
 
     location ^~ /api/ {
         proxy_pass              https://rvweb;
@@ -58,16 +58,16 @@ server {
         proxy_set_header        X-Real-IP $remote_addr;
         proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_intercept_errors  off;
-        proxy_redirect          http:// https://; 
+        proxy_redirect          http:// https://;
     }
 
-    location ~ /ra/websockify/(.*)/([0-9]+) {                                                                                                             
-        proxy_pass              http://$1:$2/websockify;                           
-        proxy_read_timeout      2592000;                                           
-        proxy_http_version      1.1;                                               
-        proxy_set_header        Upgrade $http_upgrade;                             
-        proxy_set_header        Connection "upgrade";                               
-    } 
+    location ~ /ra/websockify/(.*)/([0-9]+) {
+        proxy_pass              http://$1:$2/websockify;
+        proxy_read_timeout      2592000;
+        proxy_http_version      1.1;
+        proxy_set_header        Upgrade $http_upgrade;
+        proxy_set_header        Connection "upgrade";
+    }
 
     location ~ /ra/(.*)/([0-9]+)/(.*$) {
         proxy_pass              http://$1:$2/$3;
@@ -75,7 +75,7 @@ server {
         proxy_set_header        X-Real-IP $remote_addr;
         proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_intercept_errors  off;
-        proxy_redirect          http:// https://; 
+        proxy_redirect          http:// https://;
 	#echo 			"im in the location";
     }
 

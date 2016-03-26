@@ -273,28 +273,32 @@ class NvdParser(object):
 
             # TODO(urgent): what happened to the BASE_VECTOR and
             # ENVIRONMENTAL_VECTOR dictionaries?
-            
+
             if metric == CVEVectors.ENVIRONMENTAL_METRIC_CDP:
-                translated_value = CVSS_BASE_VECTOR_CDP_VALUES[value]
+                translated_value = CVSS_ENVIRONMENTAL_CDP_VALUES[value]
 
             elif metric == CVEVectors.ENVIRONMENTAL_METRIC_TD:
-                translated_value = CVSS_ENVIRONMENTAL_VECTOR_TD_VALUES[value]
+                translated_value = CVSS_ENVIRONMENTAL_TD_VALUES[value]
 
             elif metric == CVEVectors.ENVIRONMENTAL_METRIC_CR:
-                translated_value = CVSS_ENVIRONMENTAL_VECTOR_CR_VALUES[value]
+                translated_value = CVSS_ENVIRONMENTAL_CR_VALUES[value]
 
             elif metric == CVEVectors.ENVIRONMENTAL_METRIC_IR:
-                translated_value = CVSS_ENVIRONMENTAL_VECTOR_IR_VALUES[value]
+                translated_value = CVSS_ENVIRONMENTAL_IR_VALUES[value]
 
             elif metric == CVEVectors.ENVIRONMENTAL_METRIC_AR:
-                translated_value = CVSS_ENVIRONMENTAL_VECTOR_AR_VALUES[value]
+                translated_value = CVSS_ENVIRONMENTAL_AR_VALUES[value]
 
         return(translated_metric, translated_value)
 
 
 def parse_cve_and_udpatedb(
     download_latest_nvd=True,
-    nvd_files=[CVEDataDir.NVD_MODIFIED_FILE, CVEDataDir.NVD_CURRENT_FILE]
+    nvd_files=[
+        CVEDataDir.NVD_RECENT_FILE_UNCOMPRESSED[:-3],
+        CVEDataDir.NVD_MODIFIED_FILE_UNCOMPRESSED[:-3],
+        CVEDataDir.NVD_CURRENT_FILE[:-3]
+    ]
         ):
 
     """This begins the actual parsing of the xml files and loads up the data
@@ -343,7 +347,6 @@ def parse_cve_and_udpatedb(
             #while entry.getprevious() is not None:
             #    del entry.getparent()[0]
             #del entry
-
         insert_cve_data(cve_data_list)
         del cve_data_list
         del cve_data

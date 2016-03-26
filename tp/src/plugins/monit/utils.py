@@ -405,6 +405,6 @@ def update_agent_monit_stats(agent=None, **kwargs):
         .table(AgentCollection)
         .get(agent)
         .update(agent_stats)
-        .run(conn, no_reply=True)
+        .run(conn)
     )
 

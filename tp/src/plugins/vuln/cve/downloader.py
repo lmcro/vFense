@@ -1,4 +1,5 @@
 "CVE DOWNLOADER FOR TOPPATCH, NVD/CVE XML VERSION 1.2"
+import gzip
 import os
 import requests
 import logging
@@ -9,6 +10,14 @@ from vFense.plugins.vuln._constants import DateValues
 
 logging.config.fileConfig(VFENSE_LOGGING_CONFIG)
 logger = logging.getLogger('cve')
+
+
+def uncompress_and_write(compressed_file, dest_file):
+    contents = gzip.open(compressed_file, 'rb').read()
+    with open(dest_file, 'wb') as uncompressed:
+        uncompressed.write(contents)
+        uncompressed.close()
+        os.remove(compressed_file)
 
 
 def cve_downloader(url, file_path):
@@ -64,38 +73,61 @@ def start_nvd_xml_download():
         >>> start_nvd_xml_download()
     """
     iter_year = CVEStrings.START_YEAR
+    modified_uncompressed = os.path.join(
+        CVEDataDir.XML_DIR, CVEStrings.NVDCVE_MODIFIED[:-3]
+    )
+    recent_uncompressed = os.path.join(
+        CVEDataDir.XML_DIR, CVEStrings.NVDCVE_RECENT[:-3]
+    )
+    files_to_download = [
+        (
+            CVEStrings.NVD_MODIFIED_URL, CVEDataDir.NVD_MODIFIED_FILE,
+            modified_uncompressed, iter_year
+        ),
+        (
+            CVEStrings.NVD_RECENT_URL, CVEDataDir.NVD_RECENT_FILE,
+            recent_uncompressed, iter_year
+        )
+    ]
+    while iter_year <= DateValues.CURRENT_YEAR:
+        compressed = CVEStrings.NVDCVE_BASE + str(iter_year) + '.xml.gz'
+        uncompressed = compressed[:-3]
+        full_url = CVEStrings.NVD_DOWNLOAD_URL + compressed
+        full_nvd_compressed = os.path.join(CVEDataDir.XML_DIR, compressed)
+        full_nvd_uncompressed = os.path.join(CVEDataDir.XML_DIR, uncompressed)
+        files_to_download.append(
+            (
+                full_url, full_nvd_compressed, full_nvd_uncompressed, iter_year
+            )
+        )
+        iter_year += 1
     if not os.path.exists(CVEDataDir.XML_DIR):
         os.makedirs(CVEDataDir.XML_DIR, 0755)
-    xml_status = (
-        cve_downloader(
-            CVEStrings.NVD_MODIFIED_URL,
-            CVEDataDir.NVD_MODIFIED_FILE
-        )
-    )
-    log_status(
-        xml_status[0], xml_status[1],
-        CVEStrings.NVD_MODIFIED_URL,
-        CVEDataDir.NVD_MODIFIED_FILE
-    )
 
     # If we have not yet downloaded the 2002-now CVE's,
     # please download them now
 
-    while iter_year <= DateValues.CURRENT_YEAR:
-        nvd = CVEStrings.NVDCVE_BASE + str(iter_year) + '.xml'
-        full_url = CVEStrings.NVD_DOWNLOAD_URL + nvd
-        full_nvd = os.path.join(CVEDataDir.XML_DIR, nvd)
+    for nvd in files_to_download:
+        if not os.path.exists(nvd[2]):
+            xml_status = cve_downloader(nvd[0], nvd[1])
+            uncompress_and_write(nvd[1], nvd[2])
+            log_status(
+                xml_status[0], xml_status[1], full_url, full_nvd_uncompressed
+            )
 
-        if not os.path.exists(full_nvd):
-            xml_status = cve_downloader(full_url, full_nvd)
-            log_status(xml_status[0], xml_status[1], full_url, full_nvd)
-
-        elif iter_year == DateValues.CURRENT_YEAR:
+        elif nvd[3] == DateValues.CURRENT_YEAR:
             # Always download the latest and the current year
-            xml_status = cve_downloader(full_url, full_nvd)
-            log_status(xml_status[0], xml_status[1], full_url, full_nvd)
+            xml_status = cve_downloader(full_url, full_nvd_compressed)
+            uncompress_and_write(full_nvd_compressed, full_nvd_uncompressed)
+            log_status(
+                xml_status[0], xml_status[1], full_url, full_nvd_uncompressed
+            )
 
         else:
-            msg = "%s already exists at %s" % (nvd, full_nvd)
+            msg = (
+                "{0} and {1} already exists at {2}".format(
+                    nvd[1], nvd[2], CVEDataDir.XML_DIR
+                )
+            )
             logger.info(msg)
         iter_year = iter_year + 1

@@ -223,6 +223,20 @@ def write_content_to_file(file_location, url, content=None):
     return(content, completed)
 
 
+def get_usn_uri(usn_uri):
+    try:
+        usn_page = requests.get(usn_uri, timeout=2)
+        usn_page.close()
+        if usn_page.ok:
+            content = usn_page.content
+            return(completed, True)
+
+    except Exception as e:
+        completed = False,
+        content = None
+        return(completed, content)
+
+
 def get_url_content(usn_uri):
     """Retreive the content of the usn url
     Args:
@@ -234,41 +248,25 @@ def get_url_content(usn_uri):
     if re.search('^http', usn_uri):
         #Major hack, since some of the pages have the full url
         #insetad of the uri
-        usn_uri = re.sub('^', '/', usn_uri.split('/',3)[-1])
-    def get_usn_uri(usn_uri):
-        try:
-            usn_page = (
-                requests.get(
-                    UbuntuUSNStrings.MAIN_URL + usn_uri, timeout=2
-                )
-            )
-            usn_page.close()
-            if usn_page.ok:
-                content = usn_page.content
-                completed = True
-
-        except Exception as e:
-            get_usn_uri(usn_uri)
-            completed = False,
-            content = None
-
-        return(completed, content)
+        usn = usn_uri.split('/')[-1]
+    else:
+        usn = usn_uri.split('/')[-2]
+        usn_uri = os.path.join(UbuntuUSNStrings.MAIN_URL, usn)
 
     content = None
     completed = False
-    usn = usn_uri.split('/')[-2]
+    usn = usn_uri.split('/')[-1]
     usn_file_location = os.path.join(UbuntuDataDir.HTML_DIR, usn)
     if os.path.exists(usn_file_location):
         #Read html off of disk and check if the size is greater than 0
         #If it isn't grater than 0, than re get the file.
         if os.stat(usn_file_location).st_size > 0:
             content = open(usn_file_location, 'r').read()
-            completed = True
+            return(content, True)
         else:
-            #print get_url_content.func_name, usn_uri
-            completed, content = get_usn_uri(usn_uri)
+            return get_usn_uri(usn_uri)
 
-    elif not os.path.exists(usn_file_location):
+    else:
         #If the file doesn't exist, than retriev it and write it to file.
         #print get_url_content.func_name, usn_uri
         completed, content = get_usn_uri(usn_uri)
@@ -279,8 +277,7 @@ def get_url_content(usn_uri):
                 content
             )
         )
-
-    return(content, completed)
+        return(content, completed)
 
 
 def process_usn_page(usn_uri):
@@ -301,11 +298,11 @@ def process_usn_page(usn_uri):
     cve_references = []
     if content:
         soup = BeautifulSoup(content.replace('<br />', '\n'))
-        date_posted_em = soup.find('em')
-        bulletin_h2 = soup.div.find('h2')
-        details_h3 = soup.div.find('h3', text='Details')
-        app_info_dl = soup.div.findAll('dl')
-        cve_info_h3 = soup.div.findAll('h3', text='References')
+        date_posted_em = soup.div.findNext('em')
+        bulletin_h2 = soup.div.findNext('h2')
+        details_h3 = soup.div.findNext('h3', text='Details')
+        app_info_dl = soup.div.findAllNext('dl')
+        cve_info_h3 = soup.div.findAllNext('h3', text='References')
         if date_posted_em:
             date_posted = get_date_posted(date_posted_em)
 
@@ -350,13 +347,11 @@ def begin_usn_home_page_processing(next_page=None, full_parse=False):
     """
     if next_page:
         url = UbuntuUSNStrings.MAIN_USN_URL + '/' + next_page
-        #print begin_usn_home_page_processing.func_name, url
         try:
             main_page = requests.get(url, timeout=1)
         except Exception as e:
             return(begin_usn_home_page_processing(next_page, True))
     else:
-        #print begin_usn_home_page_processing.func_name, MAIN_USN_URL
         try:
             main_page = requests.get(UbuntuUSNStrings.MAIN_USN_URL)
         except Exception as e:
@@ -368,11 +363,6 @@ def begin_usn_home_page_processing(next_page=None, full_parse=False):
             main_page.close()
             next_page = (
                 soup.find(
-                    'div',
-                    {
-                        'class': 'pagination'
-                    }
-                ).find(
                     'a',
                     {
                         'href': re.compile(UbuntuUSNStrings.NEXT_PAGE)
@@ -404,7 +394,7 @@ def begin_usn_home_page_processing(next_page=None, full_parse=False):
                 for usn_uri in usn_uris:
                     data_to_update, ok = process_usn_page(usn_uri)
                     if ok:
-                        data = data + data_to_update
+                        data.extend(data_to_update)
                 insert_bulletin_data(data)
 
             if full_parse:

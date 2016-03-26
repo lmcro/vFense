@@ -14,8 +14,6 @@ from vFense.errorz.status_codes import SchedulerCodes
 
 logging.config.fileConfig(VFENSE_LOGGING_CONFIG)
 logger = logging.getLogger('admin_scheduler')
-get_supported_apps()
-#get_agents_apps()
 
 if __name__ == '__main__':
 

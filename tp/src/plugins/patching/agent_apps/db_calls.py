@@ -297,7 +297,7 @@ def insert_into_agent_apps(customer_name, app, conn=None):
                 r
                 .table(AppCollections.UniqueApplications)
                 .insert(app)
-                .run(conn, no_reply=True)
+                .run(conn)
             )
 
         except Exception as e:

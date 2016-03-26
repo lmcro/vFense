@@ -64,7 +64,7 @@ def get_msft_bulletin_url(count=0):
 
         if main_url.status_code == 200:
             xls_url = re.search(
-                '"(http://download.microsoft.com/download.*.xlsx)",',
+                '"(https?://download.microsoft.com/download.*.xlsx)",',
                 main_url.content
             ).group(1)
 
